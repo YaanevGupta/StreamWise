@@ -2,15 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 
-// --- SEO & META CONFIGURATION ---
-// These help Google understand and rank your site
-const SEO_CONFIG = {
-  title: "StreamWise | Global Movie & Series Intel",
-  description: "Search millions of movies and series. Real-time updates from TMDB & IMDB archives.",
-  url: "https://streamwise-rho.vercel.app" 
-};
-
-// CORE ENGINE CONSTANTS
 const API_KEY = "4fc6a47b97ec18dfac76412f452bd211"; 
 const BASE_URL = "https://api.themoviedb.org/3";
 const IMAGE_BASE = "https://image.tmdb.org/t/p/original";
@@ -30,7 +21,7 @@ const GENRES = [
   { id: 16, name: "Animation" }, { id: 99, name: "Documentary" }
 ];
 
-export default function StreamWiseMasterBuild() {
+export default function StreamWiseRestore() {
   const [sectors, setSectors] = useState<Record<string, any[]>>({});
   const [activeLang, setActiveLang] = useState('all');
   const [activeGenre, setActiveGenre] = useState(0);
@@ -42,7 +33,6 @@ export default function StreamWiseMasterBuild() {
   const [showWishlist, setShowWishlist] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
-  // HYDRATION & VAULT LOADING
   useEffect(() => { 
     setIsMounted(true);
     const saved = localStorage.getItem('sw_vault_final');
@@ -55,7 +45,6 @@ export default function StreamWiseMasterBuild() {
     if (isMounted) localStorage.setItem('sw_vault_final', JSON.stringify(wishlist));
   }, [wishlist, isMounted]);
 
-  // LIVE SYNC ENGINE
   const syncSystem = useCallback(async () => {
     if (!isMounted) return;
     try {
@@ -65,7 +54,7 @@ export default function StreamWiseMasterBuild() {
       const liveSync = `&t=${new Date().getTime()}`;
 
       if (searchQuery.trim().length > 0) {
-        endpoints = [{ key: `Search Results: ${searchQuery}`, url: `/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(searchQuery)}&include_adult=false${liveSync}` }];
+        endpoints = [{ key: `Results: ${searchQuery}`, url: `/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(searchQuery)}&include_adult=false${liveSync}` }];
       } else {
         const langLabel = LANGUAGES.find(l => l.id === activeLang)?.name;
         endpoints = [
@@ -86,13 +75,11 @@ export default function StreamWiseMasterBuild() {
         }
       });
       setSectors(resObj);
-    } catch (e) { console.error("Sync Failure"); }
+    } catch (e) { console.error("Sync Error"); }
   }, [searchQuery, activeLang, activeGenre, isMounted]);
 
   useEffect(() => {
     syncSystem();
-    const heartbeat = setInterval(syncSystem, 1800000); 
-    return () => clearInterval(heartbeat);
   }, [syncSystem]);
 
   const openIntel = async (movie: any) => {
@@ -118,65 +105,44 @@ export default function StreamWiseMasterBuild() {
   if (!isMounted) return null;
 
   return (
-    <div className="bg-[#0A070B] text-white min-h-screen font-sans selection:bg-fuchsia-600/40">
-      
-      {/* NAVIGATION & SEO HEADERS */}
+    <div className="bg-[#0A070B] text-white min-h-screen font-sans">
       <nav className="fixed top-0 w-full z-[500] bg-[#0A070B]/90 backdrop-blur-2xl border-b border-white/5">
         <div className="flex items-center justify-between px-6 md:px-16 py-6">
-            <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.location.reload()}>
+            <div className="flex items-center gap-3 cursor-pointer" onClick={() => {setSearchQuery(""); setShowWishlist(false);}}>
                 <div className="w-1.5 h-8 bg-fuchsia-600 shadow-[0_0_15px_fuchsia]" />
-                <h1 className="text-[10px] font-black uppercase tracking-[0.5em]">StreamWise</h1>
+                <span className="text-[10px] font-black uppercase tracking-[0.5em]">StreamWise</span>
             </div>
             <div className="flex items-center gap-4">
-                <button onClick={() => setShowWishlist(!showWishlist)} className="text-[10px] font-bold uppercase text-white/40 hover:text-fuchsia-500 transition-colors">
-                   Vault ({wishlist.length})
-                </button>
-                <input 
-                    type="text" value={searchQuery} placeholder="SEARCH DATABASE..." 
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="bg-white/5 border border-white/10 rounded-full px-6 py-2 text-[10px] font-bold outline-none focus:border-fuchsia-600 w-32 md:w-64 transition-all" 
-                />
+                <button onClick={() => setShowWishlist(!showWishlist)} className="text-[10px] font-bold uppercase text-white/40 hover:text-fuchsia-500">Vault ({wishlist.length})</button>
+                <input type="text" value={searchQuery} placeholder="SEARCH..." onChange={(e) => setSearchQuery(e.target.value)} className="bg-white/5 border border-white/10 rounded-full px-6 py-2 text-[10px] focus:border-fuchsia-600 w-32 md:w-64 outline-none" />
             </div>
         </div>
-
-        {/* CATEGORY FILTERS */}
-        <div className="px-6 md:px-16 pb-6 overflow-x-auto no-scrollbar">
-          <div className="flex items-center gap-3 min-w-max">
+        <div className="px-6 md:px-16 pb-6 overflow-x-auto no-scrollbar flex items-center gap-3">
             {LANGUAGES.map((l) => (
               <button key={l.id} onClick={() => setActiveLang(l.id)} className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase border transition-all ${activeLang === l.id ? 'bg-white text-black border-white' : 'border-white/10 text-zinc-500'}`}>{l.name}</button>
             ))}
-            <div className="w-[1px] h-4 bg-white/10 mx-2" />
-            {GENRES.map((g) => (
-              <button key={g.id} onClick={() => setActiveGenre(g.id)} className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase border transition-all ${activeGenre === g.id ? 'bg-fuchsia-600 border-fuchsia-600' : 'border-white/10 text-zinc-500'}`}>{g.name}</button>
-            ))}
-          </div>
         </div>
       </nav>
 
       <main className="px-6 md:px-16 pt-48 pb-20">
         {showWishlist ? (
-          <section>
-            <h2 className="text-[10px] font-black uppercase tracking-widest text-fuchsia-500 mb-10">Saved In Vault</h2>
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-6">
-                {wishlist.map(m => (
-                    <div key={m.id} onClick={() => openIntel(m)} className="aspect-[2/3] rounded-3xl overflow-hidden border border-white/10 cursor-pointer hover:scale-95 transition-transform">
-                        <img src={`${THUMB_BASE}${m.poster_path}`} className="w-full h-full object-cover" alt="m" />
-                    </div>
-                ))}
-            </div>
-          </section>
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-6">
+            {wishlist.map(m => (
+              <div key={m.id} onClick={() => openIntel(m)} className="aspect-[2/3] rounded-3xl overflow-hidden border border-white/10 cursor-pointer hover:scale-95 transition-transform">
+                <img src={`${THUMB_BASE}${m.poster_path}`} className="w-full h-full object-cover" alt="p" />
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="space-y-32">
             {Object.entries(sectors).map(([title, items]) => (
               <section key={title}>
-                <h3 className="text-[9px] font-black uppercase tracking-[0.5em] text-white/30 mb-8 flex items-center gap-4">
-                  <span className="w-6 h-[1px] bg-fuchsia-600" /> {title}
-                </h3>
+                <h3 className="text-[9px] font-black uppercase tracking-[0.5em] text-white/30 mb-8">{title}</h3>
                 <div className="flex gap-6 overflow-x-auto no-scrollbar pb-4">
                   {items.map((m) => (
                     <div key={m.id} onClick={() => openIntel(m)} className="shrink-0 w-40 md:w-56 cursor-pointer">
-                      <div className="aspect-[2/3] rounded-[2rem] overflow-hidden border border-white/5 hover:border-fuchsia-600 transition-all shadow-2xl">
-                        <img src={`${THUMB_BASE}${m.poster_path}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" alt="p" loading="lazy" />
+                      <div className="aspect-[2/3] rounded-[2rem] overflow-hidden border border-white/5 hover:border-fuchsia-600 transition-all">
+                        <img src={`${THUMB_BASE}${m.poster_path}`} className="w-full h-full object-cover" alt="p" />
                       </div>
                     </div>
                   ))}
@@ -187,44 +153,25 @@ export default function StreamWiseMasterBuild() {
         )}
       </main>
 
-      {/* DETAIL MODAL */}
       {selected && (
-        <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 backdrop-blur-3xl bg-black/90">
-          <div className="relative bg-[#0F0D12] w-full max-w-5xl rounded-[3rem] border border-white/10 overflow-hidden flex flex-col md:flex-row shadow-3xl">
-            <button onClick={() => setSelected(null)} className="absolute top-8 right-8 z-50 text-white/40 hover:text-white font-black">CLOSE [X]</button>
-            <div className="md:w-1/2 relative h-64 md:h-auto">
-                <img src={`${IMAGE_BASE}${selected.backdrop_path || selected.poster_path}`} className="absolute inset-0 w-full h-full object-cover opacity-40" alt="b" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0F0D12] to-transparent" />
-            </div>
-            <div className="md:w-1/2 p-10 md:p-16 flex flex-col justify-center">
-                <h2 className="text-4xl font-black uppercase italic mb-4 leading-tight">{selected.title || selected.name}</h2>
-                <p className="text-zinc-500 text-sm mb-8 line-clamp-4 leading-relaxed">{selected.overview}</p>
-                <div className="flex gap-3 flex-wrap mb-8">
-                    {providers.map(p => (
-                        <img key={p.provider_id} src={`${IMAGE_BASE}${p.logo_path}`} title={p.provider_name} className="w-10 h-10 rounded-xl border border-white/10" alt="prov" />
-                    ))}
-                </div>
+        <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 backdrop-blur-3xl bg-black/90" onClick={() => setSelected(null)}>
+          <div className="relative bg-[#0F0D12] w-full max-w-5xl rounded-[3rem] border border-white/10 overflow-hidden flex flex-col md:flex-row" onClick={e => e.stopPropagation()}>
+            <div className="md:w-1/2 p-10 md:p-16">
+                <h2 className="text-4xl font-black uppercase italic mb-4">{selected.title || selected.name}</h2>
+                <p className="text-zinc-500 text-sm mb-8">{selected.overview}</p>
                 <div className="flex gap-4">
-                    <button 
-                      onClick={() => {
+                    <button onClick={() => {
                         const exists = wishlist.find(x => x.id === selected.id);
                         if (exists) setWishlist(wishlist.filter(x => x.id !== selected.id));
                         else setWishlist([...wishlist, selected]);
-                      }}
-                      className="px-8 py-3 rounded-full bg-fuchsia-600 text-[10px] font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all"
-                    >
-                      {wishlist.find(x => x.id === selected.id) ? 'Remove from Vault' : 'Add to Vault'}
+                    }} className="px-8 py-3 rounded-full bg-fuchsia-600 text-[10px] font-black uppercase">
+                        {wishlist.find(x => x.id === selected.id) ? 'Remove Vault' : 'Add Vault'}
                     </button>
                 </div>
             </div>
           </div>
         </div>
       )}
-
-      <style jsx global>{`
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
     </div>
   );
 }
