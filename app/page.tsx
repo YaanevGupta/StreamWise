@@ -19,7 +19,7 @@ const GENRES = [
   { id: 18, name: "Drama" }
 ];
 
-export default function StreamWiseZeroBug() {
+export default function StreamWiseZenith() {
   const [sectors, setSectors] = useState<Record<string, any[]>>({});
   const [activeLang, setActiveLang] = useState('all');
   const [activeGenre, setActiveGenre] = useState(0);
@@ -32,22 +32,18 @@ export default function StreamWiseZeroBug() {
   const [wishlist, setWishlist] = useState<any[]>([]);
   const [showWishlist, setShowWishlist] = useState(false);
   const [activeView, setActiveView] = useState<string | null>(null);
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
-  // LOOPHOLE FIX: Hydration Safety
   useEffect(() => { 
     setIsMounted(true);
-    const saved = localStorage.getItem('sw_wishlist_v3');
+    const saved = localStorage.getItem('sw_wishlist_zenith');
     if (saved) setWishlist(JSON.parse(saved));
   }, []);
 
   useEffect(() => {
-    if (isMounted) localStorage.setItem('sw_wishlist_v3', JSON.stringify(wishlist));
+    if (isMounted) localStorage.setItem('sw_wishlist_zenith', JSON.stringify(wishlist));
   }, [wishlist, isMounted]);
 
-  // LOOPHOLE FIX: Unified Data Sync (Prevents Category vs Search conflicts)
   const syncSystem = useCallback(async () => {
     if (!isMounted) return;
     try {
@@ -56,31 +52,30 @@ export default function StreamWiseZeroBug() {
       
       let endpoints = [];
       if (searchQuery.trim().length > 0) {
-        endpoints = [{ key: `Search Results`, url: `/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(searchQuery)}` }];
+          endpoints = [{ key: `Search Database`, url: `/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(searchQuery)}` }];
       } else if (activeView) {
-          endpoints = [{ key: `${activeView} Sector`, url: `/discover/movie?api_key=${API_KEY}${langQ}${genreQ}&sort_by=popularity.desc` }];
+          endpoints = [{ key: `${activeView} Archive`, url: `/discover/movie?api_key=${API_KEY}${langQ}${genreQ}&sort_by=popularity.desc&page=1` }];
       } else {
-        endpoints = [
-          { key: `Trending Now`, url: `/trending/all/week?api_key=${API_KEY}` },
-          { key: `IMDB Legends`, url: `/movie/top_rated?api_key=${API_KEY}${langQ}` },
-          { key: `Premium Discovery`, url: `/discover/movie?api_key=${API_KEY}${langQ}${genreQ}&sort_by=popularity.desc` }
-        ];
+          endpoints = [
+              { key: `Trending Now`, url: `/trending/all/week?api_key=${API_KEY}` },
+              { key: `Premium Discovery`, url: `/discover/movie?api_key=${API_KEY}${langQ}${genreQ}&sort_by=popularity.desc` }
+          ];
       }
 
       const results = await Promise.all(endpoints.map(e => fetch(`${BASE_URL}${e.url}`).then(res => res.json())));
       const resObj: Record<string, any[]> = {};
       results.forEach((res, i) => { 
-        if (res.results) resObj[endpoints[i].key] = res.results.filter((m: any) => m.poster_path); 
+          if (res.results) resObj[endpoints[i].key] = res.results.filter((m: any) => m.poster_path); 
       });
       setSectors(resObj);
-    } catch (e) { console.error("Critical Sync Failure"); }
+    } catch (e) { console.error("Archive Link Error"); }
   }, [searchQuery, activeLang, activeGenre, activeView, isMounted]);
 
   useEffect(() => { syncSystem(); }, [syncSystem]);
 
   const openIntel = async (movie: any) => {
     setSelected(movie);
-    setTrailerKey(null); // Loophole fix: reset trailer before loading new one
+    setTrailerKey(null); // Reset for new load
     try {
       const type = movie.media_type || (movie.first_air_date ? 'tv' : 'movie');
       const [cRes, pRes, vRes, rRes] = await Promise.all([
@@ -93,13 +88,8 @@ export default function StreamWiseZeroBug() {
       setRecommendations(rRes.results?.slice(0, 10) || []);
       const trailer = vRes.results?.find((v: any) => v.type === "Trailer" && v.site === "YouTube");
       setTrailerKey(trailer?.key || null);
-      const loc = pRes.results?.IN || pRes.results?.US || Object.values(pRes.results || {})[0] || {};
-      const unique: any[] = [];
-      const seen = new Set();
-      [...(loc.flatrate || []), ...(loc.buy || []), ...(loc.rent || [])].forEach((p: any) => {
-        if (!seen.has(p.provider_name)) { seen.add(p.provider_name); unique.push(p); }
-      });
-      setProviders(unique);
+      const loc = pRes.results?.US || pRes.results?.IN || Object.values(pRes.results || {})[0] || {};
+      setProviders([...(loc.flatrate || []), ...(loc.buy || [])].slice(0, 3));
     } catch { setProviders([]); }
   };
 
@@ -108,148 +98,143 @@ export default function StreamWiseZeroBug() {
   return (
     <div className="bg-[#050505] text-white min-h-screen font-sans selection:bg-fuchsia-600/40">
       
-      {/* 🚀 NAV: FIXING Z-INDEX & ALIGNMENT */}
+      {/* 🚀 NAVIGATION */}
       <nav className="fixed top-0 w-full z-[1000] bg-black/80 backdrop-blur-3xl border-b border-white/5">
         <div className="flex items-center justify-between px-6 md:px-16 py-8">
-            <div className="flex items-center gap-4 cursor-pointer" onClick={() => {setActiveView(null); setSearchQuery(""); setShowWishlist(false); setActiveGenre(0);}}>
-                <div className="w-1.5 h-10 bg-fuchsia-600 shadow-[0_0_25px_fuchsia]" />
-                <span className="text-[11px] font-black uppercase tracking-[0.8em]">StreamWise</span>
+            <div className="flex items-center gap-4 cursor-pointer" onClick={() => {setActiveView(null); setSearchQuery(""); setShowWishlist(false);}}>
+                <div className="w-1 h-8 bg-fuchsia-600 shadow-[0_0_20px_fuchsia]" />
+                <span className="text-[10px] font-black uppercase tracking-[0.6em]">StreamWise</span>
             </div>
-            
             <div className="flex items-center gap-8">
-                <input type="text" value={searchQuery} placeholder="SEARCH SYSTEM..." 
-                    onChange={(e) => {setSearchQuery(e.target.value); setActiveView(null); setShowWishlist(false);}} 
-                    className="bg-white/5 border border-white/10 rounded-full px-8 py-4 text-[10px] font-black tracking-[0.2em] outline-none focus:border-fuchsia-600 w-48 lg:w-[400px] transition-all" 
-                />
+                <input type="text" value={searchQuery} placeholder="SYSTEM SCAN..." onChange={(e) => {setSearchQuery(e.target.value); setActiveView(null); setShowWishlist(false);}} className="bg-white/5 border border-white/10 rounded-full px-8 py-3 text-[10px] font-black tracking-widest outline-none focus:border-fuchsia-600 w-64 lg:w-96" />
                 <button onClick={() => {setShowWishlist(!showWishlist); setActiveView(null);}} className={`text-[10px] font-black uppercase tracking-widest transition-all ${showWishlist ? 'text-fuchsia-500' : 'text-white/40'}`}>Wishlist ({wishlist.length})</button>
-                <button onClick={() => setIsLoginOpen(true)} className="px-8 py-3 bg-white text-black text-[10px] font-black uppercase rounded-full hover:bg-fuchsia-600 hover:text-white transition-all">Agent Login</button>
             </div>
         </div>
-
-        {/* PREMIUM FILTERS: FIXING CLICK ACTION */}
-        <div className="px-6 md:px-16 pb-8 overflow-x-auto no-scrollbar flex items-center gap-4">
-            <div className="flex gap-2 p-1 bg-white/5 rounded-2xl border border-white/10">
-                {LANGUAGES.map((l) => (
-                    <button key={l.id} onClick={() => { setActiveLang(l.id); setActiveView(l.name); setSearchQuery(""); }} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${activeLang === l.id && activeView === l.name ? 'bg-white text-black' : 'text-zinc-500 hover:text-white'}`}>{l.name}</button>
-                ))}
-            </div>
-            <div className="flex gap-2 p-1 bg-white/5 rounded-2xl border border-white/10">
-                {GENRES.map((g) => (
-                    <button key={g.id} onClick={() => { setActiveGenre(g.id); setActiveView(g.name); setSearchQuery(""); }} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${activeGenre === g.id && activeView === g.name ? 'bg-fuchsia-600 text-white' : 'text-zinc-500 hover:text-white'}`}>{g.name}</button>
-                ))}
-            </div>
+        <div className="px-6 md:px-16 pb-6 overflow-x-auto no-scrollbar flex items-center gap-3">
+            {LANGUAGES.map((l) => (
+                <button key={l.id} onClick={() => { setActiveLang(l.id); setActiveView(l.name); setSearchQuery(""); }} className={`px-6 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${activeLang === l.id ? 'bg-white text-black' : 'bg-white/5 text-zinc-500 hover:text-white'}`}>{l.name}</button>
+            ))}
+            <div className="w-[1px] h-4 bg-white/10 mx-2" />
+            {GENRES.map((g) => (
+                <button key={g.id} onClick={() => { setActiveGenre(g.id); setActiveView(g.name); setSearchQuery(""); }} className={`px-6 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${activeGenre === g.id ? 'bg-fuchsia-600 text-white shadow-lg shadow-fuchsia-600/20' : 'bg-white/5 text-zinc-500 hover:text-white'}`}>{g.name}</button>
+            ))}
         </div>
       </nav>
 
-      {/* 🖼️ DYNAMIC GRID: DEDICATED SECTOR PAGES */}
-      <main className="px-6 md:px-16 pt-72 pb-40">
-        {activeView || showWishlist ? (
-            <div className="animate-in fade-in slide-in-from-bottom-5 duration-700">
-                <div className="flex items-center justify-between mb-16">
-                    <h2 className="text-5xl font-black uppercase tracking-tighter italic">{showWishlist ? "Private Wishlist" : `${activeView} Sector`}</h2>
-                    <button onClick={() => {setActiveView(null); setShowWishlist(false);}} className="text-[10px] font-black uppercase tracking-widest border-b border-fuchsia-600 pb-1">Back to Mainframe</button>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-10">
+      {/* 🖼️ DYNAMIC GRID */}
+      <main className="px-6 md:px-16 pt-64 pb-40">
+        {(activeView || showWishlist) ? (
+            <div className="animate-in fade-in duration-700">
+                <h2 className="text-4xl font-black uppercase tracking-tighter mb-12 italic">{showWishlist ? "Private Wishlist" : `${activeView} Sector`}</h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
                     {(showWishlist ? wishlist : Object.values(sectors).flat()).map((m, i) => (
-                        <div key={i} onClick={() => openIntel(m)} className="group cursor-pointer">
-                            <div className="aspect-[2/3] rounded-[2.5rem] overflow-hidden border border-white/5 group-hover:border-fuchsia-600 transition-all bg-zinc-900 shadow-2xl">
-                                <img src={`${THUMB_BASE}${m.poster_path}`} className="w-full h-full object-cover group-hover:scale-110 transition-all duration-1000" />
-                            </div>
+                        <div key={i} onClick={() => openIntel(m)} className="aspect-[2/3] rounded-3xl overflow-hidden border border-white/5 cursor-pointer hover:border-fuchsia-600 transition-all shadow-2xl">
+                            <img src={`${THUMB_BASE}${m.poster_path}`} className="w-full h-full object-cover" alt="p" />
                         </div>
                     ))}
                 </div>
             </div>
         ) : (
-            <div className="space-y-48">
+            <div className="space-y-32">
             {Object.entries(sectors).map(([title, items]) => (
                 <section key={title}>
-                <div className="flex justify-between items-center mb-12">
-                    <h3 className="text-[11px] font-black uppercase tracking-[0.8em] text-white/20 flex items-center gap-4"><span className="w-12 h-[1px] bg-fuchsia-600" /> {title}</h3>
-                    <button onClick={() => setActiveView(title)} className="text-[10px] font-black uppercase tracking-widest text-fuchsia-600 hover:text-white transition-all underline underline-offset-8">Explore More +</button>
-                </div>
-                <div className="flex gap-8 overflow-x-auto no-scrollbar pb-10">
-                    {items?.slice(0, 15).map((m, idx) => (
-                    <div key={`${m.id}-${idx}`} onClick={() => openIntel(m)} className="shrink-0 w-48 md:w-72 group cursor-pointer">
-                        <div className="aspect-[2/3] rounded-[3rem] overflow-hidden border border-white/5 relative z-10 transition-all group-hover:border-fuchsia-600 bg-zinc-900 shadow-2xl">
-                            <img src={`${THUMB_BASE}${m.poster_path}`} className="w-full h-full object-cover group-hover:scale-105 transition-all duration-1000" />
-                        </div>
+                    <div className="flex justify-between items-center mb-10">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.6em] text-white/20">{title}</h3>
+                        <button onClick={() => setActiveView(title)} className="text-[9px] font-black text-fuchsia-600 uppercase tracking-widest border-b border-fuchsia-600">Explore Sector +</button>
                     </div>
-                    ))}
-                </div>
+                    <div className="flex gap-6 overflow-x-auto no-scrollbar">
+                        {items?.map((m, idx) => (
+                        <div key={idx} onClick={() => openIntel(m)} className="shrink-0 w-44 md:w-64 aspect-[2/3] rounded-[2rem] overflow-hidden border border-white/5 cursor-pointer group hover:border-fuchsia-600 transition-all bg-zinc-900">
+                            <img src={`${THUMB_BASE}${m.poster_path}`} className="w-full h-full object-cover group-hover:scale-110 transition-all duration-1000" alt="p" />
+                        </div>
+                        ))}
+                    </div>
                 </section>
             ))}
             </div>
         )}
       </main>
 
-      {/* 🎭 THE DOSSIER: ALIGNMENT & SOUND FIX */}
+      {/* 🎭 THE DOSSIER (MODAL) */}
       {selected && (
         <div className="fixed inset-0 z-[2000] flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/98 backdrop-blur-2xl" onClick={() => setSelected(null)} />
-          
-          <div className="relative bg-[#080808] w-full h-full md:h-[92vh] md:w-[95vw] md:rounded-[4rem] border border-white/10 overflow-hidden shadow-3xl flex flex-col md:flex-row animate-in zoom-in-95 duration-500">
+          <div className="absolute inset-0 bg-black/98 backdrop-blur-3xl" onClick={() => setSelected(null)} />
+          <div className="relative bg-[#080808] w-full h-full md:h-[94vh] md:w-[96vw] md:rounded-[3rem] border border-white/10 overflow-hidden shadow-3xl flex flex-col md:flex-row animate-in zoom-in-95 duration-500">
             
-            {/* TRAILER BACKGROUND WITH SOUND LOOPHOLE FIX */}
-            <div className="absolute inset-0 z-0 pointer-events-none opacity-30">
-               {trailerKey ? (
+            {/* AUTO-PLAY SOUND TRAILER: Mute=0 logic */}
+            <div className="absolute inset-0 z-0 pointer-events-none opacity-40">
+               {trailerKey && (
                  <iframe 
-                   src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1&mute=${isMuted ? 1 : 0}&controls=0&loop=1&playlist=${trailerKey}&modestbranding=1`} 
-                   className="w-[300%] h-[300%] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                   src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1&mute=0&controls=0&loop=1&playlist=${trailerKey}`} 
+                   className="w-[300%] h-[300%] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" 
+                   allow="autoplay"
                  />
-               ) : (
-                 <img src={`${IMAGE_BASE}${selected.backdrop_path}`} className="w-full h-full object-cover" />
                )}
                <div className="absolute inset-0 bg-gradient-to-t from-[#080808] via-transparent to-transparent" />
             </div>
 
             <div className="relative z-10 w-full flex flex-col md:flex-row overflow-y-auto no-scrollbar">
                 
-                {/* TITLES & ALIGNMENT FIX */}
-                <div className="flex-1 p-8 md:p-24 flex flex-col justify-end min-h-[60vh] md:min-h-0">
-                    <button onClick={() => setSelected(null)} className="absolute top-12 left-12 text-[10px] font-black uppercase tracking-[0.4em] text-white/30 hover:text-white">← Exit Dossier</button>
+                {/* MOVIE INFO SECTOR */}
+                <div className="flex-1 p-8 md:p-20 flex flex-col justify-end min-h-[60vh] md:min-h-0">
+                    <button onClick={() => setSelected(null)} className="absolute top-10 left-10 text-[9px] font-black uppercase tracking-[0.4em] text-white/30">← EXIT DOSSIER</button>
                     
-                    <h2 className="text-6xl md:text-[8rem] font-black uppercase tracking-tighter leading-[0.75] mb-12 italic">{selected.title || selected.name}</h2>
-
-                    <div className="flex flex-wrap gap-4 mb-12">
-                        <button onClick={() => {
+                    {/* REDUCED SIZE TITLE */}
+                    <h2 className="text-4xl md:text-7xl font-black uppercase tracking-tighter mb-8 italic drop-shadow-2xl">{selected.title || selected.name}</h2>
+                    
+                    <div className="flex gap-4 mb-8">
+                         <button onClick={() => {
                             const exists = wishlist.find(x => x.id === selected.id);
                             if (exists) setWishlist(wishlist.filter(x => x.id !== selected.id));
                             else setWishlist([...wishlist, selected]);
-                        }} className={`px-12 py-5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${wishlist.find(x => x.id === selected.id) ? 'bg-fuchsia-600' : 'bg-white text-black hover:bg-fuchsia-600 hover:text-white'}`}>
+                        }} className={`px-10 py-4 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${wishlist.find(x => x.id === selected.id) ? 'bg-fuchsia-600 shadow-lg shadow-fuchsia-600/30' : 'bg-white text-black hover:bg-fuchsia-600 hover:text-white'}`}>
                             {wishlist.find(x => x.id === selected.id) ? 'In Wishlist' : '+ Wishlist'}
                         </button>
-                        <button onClick={() => setIsMuted(!isMuted)} className="px-6 py-5 rounded-full bg-white/10 border border-white/10 text-[10px]">{isMuted ? '🔇 Muted' : '🔊 Sound On'}</button>
                     </div>
 
-                    <p className="text-xl md:text-2xl text-white/40 max-w-2xl leading-relaxed italic mb-16">"{selected.overview || "Transmission missing. No description found in database."}"</p>
+                    <p className="text-lg text-white/50 max-w-2xl italic leading-relaxed mb-12">"{selected.overview || "Information transmission pending..."}"</p>
                     
-                    <div className="flex flex-wrap gap-3">
+                    {/* ACTOR CLICKING FIXED */}
+                    <div className="flex flex-wrap gap-2">
                         {cast.map((c, i) => (
-                          <span key={i} className="text-[10px] font-black uppercase text-white/30 bg-white/5 px-6 py-3 rounded-2xl border border-white/10">{c.name}</span>
+                          <button key={i} onClick={() => {setSearchQuery(c.name); setSelected(null); setActiveView(null);}} className="text-[9px] font-black uppercase bg-white/5 px-5 py-2.5 rounded-xl border border-white/5 hover:text-fuchsia-500 hover:border-fuchsia-600 transition-all">
+                              {c.name}
+                          </button>
                         ))}
                     </div>
                 </div>
 
-                {/* CURRENCY & NODES FIX */}
-                <div className="w-full md:w-[500px] bg-black/80 backdrop-blur-3xl border-l border-white/10 p-12 overflow-y-auto no-scrollbar">
-                    <p className="text-fuchsia-500 text-[11px] font-black uppercase tracking-[0.4em] mb-12">Streaming Nodes</p>
-                    <div className="space-y-6 mb-24">
+                {/* SIDEBAR ARCHIVE */}
+                <div className="w-full md:w-[480px] bg-black/70 backdrop-blur-3xl border-l border-white/10 p-10 overflow-y-auto no-scrollbar">
+                    
+                    <p className="text-fuchsia-500 text-[10px] font-black uppercase tracking-[0.4em] mb-10">STREAMING NODES</p>
+                    <div className="space-y-4 mb-16">
                         {providers.map((p, i) => (
-                            <div key={i} className="flex items-center justify-between bg-white/[0.03] p-8 rounded-[3rem] border border-white/5">
-                                <div className="flex items-center gap-6">
-                                    <img src={`${IMAGE_BASE}${p.logo_path}`} className="w-12 h-12 rounded-2xl" />
-                                    <span className="text-[12px] font-black uppercase tracking-widest">{p.provider_name}</span>
+                            <button key={i} onClick={() => window.open(`https://www.google.com/search?q=watch+${selected.title}+on+${p.provider_name}`)} className="w-full flex items-center justify-between bg-white/[0.03] p-6 rounded-[2rem] border border-white/5 hover:bg-white/10 transition-all group">
+                                <div className="flex items-center gap-4">
+                                    <img src={`${IMAGE_BASE}${p.logo_path}`} className="w-10 h-10 rounded-xl" alt="L" />
+                                    <span className="text-[11px] font-black uppercase tracking-widest">{p.provider_name}</span>
                                 </div>
-                                <span className="text-[10px] font-black text-fuchsia-500 bg-fuchsia-500/10 px-6 py-2 rounded-full border border-fuchsia-500/20">₹{Math.floor(selected.popularity * 10)} / $VAL</span>
-                            </div>
+                                {/* PRICE FIXED TO DOLLARS */}
+                                <span className="text-[10px] font-black text-fuchsia-500 bg-fuchsia-500/10 px-4 py-1.5 rounded-full border border-fuchsia-500/20 group-hover:bg-fuchsia-600 group-hover:text-white transition-all">$19.99</span>
+                            </button>
                         ))}
                     </div>
 
-                    <p className="text-white/20 text-[11px] font-black uppercase tracking-[0.4em] mb-10 text-center">Related Data Nodes</p>
+                    {/* MORE INFORMATION SECTOR: POPULATED */}
+                    <p className="text-white/20 text-[10px] font-black uppercase tracking-[0.4em] mb-8">MORE INFORMATION</p>
+                    <div className="space-y-3 text-[11px] font-bold mb-16 uppercase tracking-widest border-b border-white/5 pb-10">
+                        <p className="flex justify-between">Release Date: <span className="text-white italic">{selected.release_date || selected.first_air_date || 'Unknown'}</span></p>
+                        <p className="flex justify-between">Global Rank: <span className="text-fuchsia-500">#{Math.floor(selected.popularity)}</span></p>
+                        <p className="flex justify-between">Database Rating: <span className="text-white italic">{selected.vote_average?.toFixed(1)} ★</span></p>
+                        <p className="flex justify-between">Media Type: <span className="text-white italic">{selected.media_type || 'Film'}</span></p>
+                    </div>
+
+                    <p className="text-white/20 text-[10px] font-black uppercase tracking-[0.4em] mb-8 text-center">RELATED NODES</p>
                     <div className="grid grid-cols-2 gap-4">
                         {recommendations.map((r, i) => (
-                           <div key={i} onClick={() => openIntel(r)} className="aspect-[2/3] rounded-[2rem] overflow-hidden border border-white/5 cursor-pointer hover:border-fuchsia-600 transition-all">
-                              <img src={`${THUMB_BASE}${r.poster_path}`} className="w-full h-full object-cover" />
+                           <div key={i} onClick={() => openIntel(r)} className="aspect-[2/3] rounded-3xl overflow-hidden border border-white/5 cursor-pointer hover:border-fuchsia-600 transition-all">
+                              <img src={`${THUMB_BASE}${r.poster_path}`} className="w-full h-full object-cover" alt="r" />
                            </div>
                         ))}
                     </div>
@@ -257,21 +242,6 @@ export default function StreamWiseZeroBug() {
 
             </div>
           </div>
-        </div>
-      )}
-
-      {/* 🔐 LOGIN MODAL FIX */}
-      {isLoginOpen && (
-        <div className="fixed inset-0 z-[3000] flex items-center justify-center p-6">
-            <div className="absolute inset-0 bg-black/95 backdrop-blur-3xl" onClick={() => setIsLoginOpen(false)} />
-            <div className="relative bg-[#0F0F0F] border border-white/10 p-16 rounded-[4rem] w-full max-w-lg shadow-3xl animate-in zoom-in-90 duration-300">
-                <h3 className="text-4xl font-black uppercase tracking-tighter italic mb-8 text-center">Agent Access</h3>
-                <div className="space-y-4">
-                    <input type="email" placeholder="IDENTIFIER" className="w-full bg-white/5 border border-white/10 rounded-full px-8 py-5 text-[10px] font-black outline-none focus:border-fuchsia-600" />
-                    <input type="password" placeholder="CLEARANCE CODE" className="w-full bg-white/5 border border-white/10 rounded-full px-8 py-5 text-[10px] font-black outline-none focus:border-fuchsia-600" />
-                    <button className="w-full bg-white text-black py-5 rounded-full text-[10px] font-black uppercase tracking-[0.4em] hover:bg-fuchsia-600 hover:text-white transition-all shadow-xl">Authenticate</button>
-                </div>
-            </div>
         </div>
       )}
 
