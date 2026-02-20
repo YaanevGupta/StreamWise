@@ -22,7 +22,7 @@ const GENRES = [
   { id: 16, name: "Animation" }, { id: 99, name: "Documentary" }
 ];
 
-export default function StreamWiseFinal() {
+export default function StreamWiseMasterArchive() {
   const [sectors, setSectors] = useState<Record<string, any[]>>({});
   const [activeLang, setActiveLang] = useState('all');
   const [activeGenre, setActiveGenre] = useState(0);
@@ -34,7 +34,7 @@ export default function StreamWiseFinal() {
   const [showWishlist, setShowWishlist] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
-  // 1. HYDRATION PROTECTION
+  // 1. HYDRATION & VAULT SYNC
   useEffect(() => { 
     setIsMounted(true);
     const saved = localStorage.getItem('sw_master_vault_final');
@@ -47,22 +47,25 @@ export default function StreamWiseFinal() {
     if (isMounted) localStorage.setItem('sw_master_vault_final', JSON.stringify(wishlist));
   }, [wishlist, isMounted]);
 
-  // 2. INFINITE SYNC ENGINE
+  // 2. ULTIMATE SYNC ENGINE (IMDB & GLOBAL FETCH)
   const syncSystem = useCallback(async () => {
     if (!isMounted) return;
     try {
       let endpoints = [];
       const langQ = activeLang !== 'all' ? `&with_original_language=${activeLang}` : "";
       const genreQ = activeGenre !== 0 ? `&with_genres=${activeGenre}` : "";
+      const liveSync = `&t=${new Date().getTime()}`;
 
       if (searchQuery.trim().length > 0) {
-        endpoints = [{ key: `Results: ${searchQuery}`, url: `/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(searchQuery)}&include_adult=false` }];
+        endpoints = [{ key: `Global Results: ${searchQuery}`, url: `/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(searchQuery)}&include_adult=false${liveSync}` }];
       } else {
         const langLabel = LANGUAGES.find(l => l.id === activeLang)?.name;
         endpoints = [
-          { key: `${langLabel} Blockbusters`, url: `/discover/movie?api_key=${API_KEY}${langQ}${genreQ}&sort_by=popularity.desc` },
-          { key: `Trending Now`, url: `/trending/all/week?api_key=${API_KEY}` },
-          { key: `${langLabel} Series`, url: `/discover/tv?api_key=${API_KEY}${langQ}${genreQ}&sort_by=popularity.desc` }
+          { key: `Trending Now`, url: `/trending/all/week?api_key=${API_KEY}${liveSync}` },
+          { key: `IMDB Legends (Top Rated)`, url: `/movie/top_rated?api_key=${API_KEY}${langQ}${liveSync}` },
+          { key: `${langLabel} Blockbusters`, url: `/discover/movie?api_key=${API_KEY}${langQ}${genreQ}&sort_by=popularity.desc${liveSync}` },
+          { key: `Upcoming Global Releases`, url: `/movie/upcoming?api_key=${API_KEY}${langQ}${liveSync}` },
+          { key: `Popular Series`, url: `/tv/popular?api_key=${API_KEY}${langQ}${liveSync}` }
         ];
       }
 
@@ -77,12 +80,12 @@ export default function StreamWiseFinal() {
         }
       });
       setSectors(resObj);
-    } catch (e) { console.error("Neural Link Error"); }
+    } catch (e) { console.error("Archive Link Error"); }
   }, [searchQuery, activeLang, activeGenre, isMounted]);
 
   useEffect(() => { syncSystem(); }, [syncSystem]);
 
-  // 3. INTEL FETCH
+  // 3. INTEL GATHERING
   const openIntel = async (movie: any) => {
     setSelected(movie);
     try {
@@ -103,31 +106,19 @@ export default function StreamWiseFinal() {
     } catch { setProviders([]); }
   };
 
-  const toggleWishlist = (movie: any) => {
-    setWishlist(prev => {
-      const exists = prev.find(m => m.id === movie.id);
-      if (exists) return prev.filter(m => m.id !== movie.id);
-      return [...prev, movie];
-    });
-  };
-
   const handleShare = async (movie: any) => {
     const shareData = {
       title: movie.title || movie.name,
-      text: `Checking out "${movie.title || movie.name}" on StreamWise. The intel is solid.`,
+      text: `Checking out intel on "${movie.title || movie.name}" via StreamWise.`,
       url: window.location.origin
     };
-
     try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
+      if (navigator.share) await navigator.share(shareData);
+      else {
         await navigator.clipboard.writeText(window.location.origin);
         alert("Transmission link copied to clipboard!");
       }
-    } catch (err) {
-      console.log("Share cancelled");
-    }
+    } catch (err) {}
   };
 
   if (!isMounted) return null;
@@ -135,6 +126,7 @@ export default function StreamWiseFinal() {
   return (
     <div className="bg-[#0A070B] text-white min-h-screen font-sans selection:bg-fuchsia-600/40 overflow-x-hidden">
       
+      {/* PERSISTENT NAVIGATION */}
       <nav className="fixed top-0 w-full z-[500] bg-[#0A070B]/95 backdrop-blur-3xl border-b border-white/5">
         <div className="flex items-center justify-between px-6 md:px-16 py-6">
             <div className="flex items-center gap-3 cursor-pointer shrink-0" onClick={() => {setSearchQuery(""); setShowWishlist(false); setActiveLang('all'); setActiveGenre(0);}}>
@@ -146,7 +138,7 @@ export default function StreamWiseFinal() {
                     Vault ({wishlist.length})
                 </button>
                 <input 
-                    type="text" value={searchQuery} placeholder="TYPE ANY MOVIE OR SHOW..." 
+                    type="text" value={searchQuery} placeholder="SEARCH MILLIONS OF RECORDS..." 
                     onChange={(e) => {setSearchQuery(e.target.value); setShowWishlist(false);}}
                     className="bg-white/5 border border-white/10 rounded-2xl px-6 py-3 text-[10px] font-black tracking-widest outline-none focus:border-fuchsia-600 w-40 md:w-96 transition-all" 
                 />
@@ -163,7 +155,7 @@ export default function StreamWiseFinal() {
             <div className="w-[1px] h-4 bg-white/20 shrink-0 mx-2" />
             <div className="flex gap-2">
                 {GENRES.map((g) => (
-                  <button key={g.id} onClick={() => {setActiveGenre(g.id); setSearchQuery("");}} className={`px-5 py-2 rounded-xl text-[9px] font-black uppercase border transition-all whitespace-nowrap ${activeGenre === g.id ? 'bg-fuchsia-600 border-fuchsia-600 shadow-lg shadow-fuchsia-500/20' : 'border-white/10 text-zinc-400'}`}>{g.name}</button>
+                  <button key={g.id} onClick={() => {setActiveGenre(g.id); setSearchQuery("");}} className={`px-5 py-2 rounded-xl text-[9px] font-black uppercase border transition-all whitespace-nowrap ${activeGenre === g.id ? 'bg-fuchsia-600 border-fuchsia-600 shadow-lg' : 'border-white/10 text-zinc-400'}`}>{g.name}</button>
                 ))}
             </div>
           </div>
@@ -183,7 +175,6 @@ export default function StreamWiseFinal() {
                     </div>
                 ))}
             </div>
-            {wishlist.length === 0 && <div className="h-[40vh] flex items-center justify-center text-white/10 font-black uppercase tracking-[1em]">Archive Empty</div>}
           </section>
         ) : (
           <div className="space-y-40">
@@ -193,7 +184,6 @@ export default function StreamWiseFinal() {
                   <h3 className="text-[10px] font-black uppercase tracking-[0.6em] text-white/30 flex items-center gap-4">
                      <span className="w-10 h-[1px] bg-fuchsia-600" /> {title}
                   </h3>
-                  <button onClick={() => {setSearchQuery(title.split(' ')[0]); window.scrollTo(0,0);}} className="text-[9px] font-black uppercase tracking-widest text-fuchsia-600 hover:text-white transition-all underline underline-offset-8">Explore Sector +</button>
                 </div>
                 <div className="flex gap-6 overflow-x-auto no-scrollbar pb-10 scroll-smooth">
                   {items.map((m) => (
@@ -213,6 +203,7 @@ export default function StreamWiseFinal() {
         )}
       </main>
 
+      {/* PORTAL MODAL */}
       {selected && (
         <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/98 backdrop-blur-3xl animate-in fade-in" onClick={() => setSelected(null)} />
@@ -222,15 +213,21 @@ export default function StreamWiseFinal() {
               <div className="relative z-10">
                 <h2 className="text-4xl md:text-8xl font-black uppercase tracking-tighter italic mb-6 leading-none">{selected.title || selected.name}</h2>
                 <div className="flex gap-4 mb-8">
-                    <button onClick={() => toggleWishlist(selected)} className={`px-10 py-4 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${wishlist.find(x => x.id === selected.id) ? 'bg-fuchsia-600 border-fuchsia-600 shadow-lg' : 'bg-white/10 border border-white/10 hover:bg-white hover:text-black'}`}>
+                    <button onClick={() => {
+                        const exists = wishlist.find(x => x.id === selected.id);
+                        if (exists) setWishlist(wishlist.filter(x => x.id !== selected.id));
+                        else setWishlist([...wishlist, selected]);
+                    }} className={`px-10 py-4 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${wishlist.find(x => x.id === selected.id) ? 'bg-fuchsia-600 border-fuchsia-600 shadow-lg shadow-fuchsia-500/20' : 'bg-white/10 border border-white/10 hover:bg-white hover:text-black'}`}>
                         {wishlist.find(x => x.id === selected.id) ? '✓ Saved' : '+ Save to Vault'}
                     </button>
                     <button onClick={() => handleShare(selected)} className="px-10 py-4 rounded-full bg-fuchsia-600/10 border border-fuchsia-600/30 text-fuchsia-500 text-[10px] font-black uppercase tracking-widest hover:bg-fuchsia-600 hover:text-white transition-all">
                         Share Intel
                     </button>
-                    <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(selected.title || selected.name)}+trailer`)} className="px-10 py-4 rounded-full bg-white text-black text-[10px] font-black uppercase tracking-widest hover:bg-fuchsia-600 hover:text-white transition-all">Trailer</button>
+                    <button onClick={() => window.open(`https://www.imdb.com/find?q=${encodeURIComponent(selected.title || selected.name)}`, '_blank')} className="px-10 py-4 rounded-full bg-[#f3ce13] text-black text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all">
+                        IMDB Archive
+                    </button>
                 </div>
-                <p className="text-zinc-500 text-sm md:text-lg italic max-w-xl line-clamp-3 leading-relaxed">"{selected.overview || "Database overview unavailable for this record."}"</p>
+                <p className="text-zinc-500 text-sm md:text-lg italic max-w-xl line-clamp-3 leading-relaxed">"{selected.overview || "Database record is currently being updated."}"</p>
               </div>
             </div>
             <div className="md:w-2/5 p-12 overflow-y-auto no-scrollbar border-l border-white/5 bg-white/[0.01]">
@@ -242,10 +239,10 @@ export default function StreamWiseFinal() {
                                 <img src={`${IMAGE_BASE}${p.logo_path}`} className="w-8 h-8 rounded-lg shadow-sm" alt="L" />
                                 <span className="text-[10px] font-black uppercase tracking-widest">{p.provider_name}</span>
                             </div>
-                            <span className="text-[8px] font-black opacity-30">Active</span>
+                            <span className="text-[8px] font-black opacity-30 italic">Available</span>
                         </div>
                     ))}
-                    {providers.length === 0 && <p className="text-[9px] text-white/20 uppercase font-black">No Direct Nodes Found</p>}
+                    {providers.length === 0 && <p className="text-[9px] text-white/20 uppercase font-black">Scanning External Nodes...</p>}
                 </div>
                 <p className="text-white/20 text-[10px] font-black uppercase tracking-[0.4em] mt-12 mb-8">Wikipedia Personnel</p>
                 <div className="flex flex-wrap gap-2">
