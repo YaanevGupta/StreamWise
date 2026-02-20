@@ -34,7 +34,7 @@ export default function StreamWiseFinal() {
   const [showWishlist, setShowWishlist] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
-  // 1. HYDRATION PROTECTION (Prevents initial load errors)
+  // 1. HYDRATION PROTECTION
   useEffect(() => { 
     setIsMounted(true);
     const saved = localStorage.getItem('sw_master_vault_final');
@@ -56,7 +56,6 @@ export default function StreamWiseFinal() {
       const genreQ = activeGenre !== 0 ? `&with_genres=${activeGenre}` : "";
 
       if (searchQuery.trim().length > 0) {
-        // GLOBAL SEARCH: Finds everything available on TMDB
         endpoints = [{ key: `Results: ${searchQuery}`, url: `/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(searchQuery)}&include_adult=false` }];
       } else {
         const langLabel = LANGUAGES.find(l => l.id === activeLang)?.name;
@@ -83,7 +82,7 @@ export default function StreamWiseFinal() {
 
   useEffect(() => { syncSystem(); }, [syncSystem]);
 
-  // 3. DOSSIER INTEL FETCH
+  // 3. INTEL FETCH
   const openIntel = async (movie: any) => {
     setSelected(movie);
     try {
@@ -112,12 +111,30 @@ export default function StreamWiseFinal() {
     });
   };
 
+  const handleShare = async (movie: any) => {
+    const shareData = {
+      title: movie.title || movie.name,
+      text: `Checking out "${movie.title || movie.name}" on StreamWise. The intel is solid.`,
+      url: window.location.origin
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.origin);
+        alert("Transmission link copied to clipboard!");
+      }
+    } catch (err) {
+      console.log("Share cancelled");
+    }
+  };
+
   if (!isMounted) return null;
 
   return (
     <div className="bg-[#0A070B] text-white min-h-screen font-sans selection:bg-fuchsia-600/40 overflow-x-hidden">
       
-      {/* HEADER SECTION */}
       <nav className="fixed top-0 w-full z-[500] bg-[#0A070B]/95 backdrop-blur-3xl border-b border-white/5">
         <div className="flex items-center justify-between px-6 md:px-16 py-6">
             <div className="flex items-center gap-3 cursor-pointer shrink-0" onClick={() => {setSearchQuery(""); setShowWishlist(false); setActiveLang('all'); setActiveGenre(0);}}>
@@ -136,7 +153,6 @@ export default function StreamWiseFinal() {
             </div>
         </div>
 
-        {/* SIDEWAYS CATEGORIES: NO WRAPPING */}
         <div className="px-6 md:px-16 pb-6 overflow-x-auto no-scrollbar scroll-smooth">
           <div className="inline-flex items-center gap-4 min-w-full">
             <div className="flex gap-2">
@@ -154,7 +170,6 @@ export default function StreamWiseFinal() {
         </div>
       </nav>
 
-      {/* MAIN DYNAMIC CONTENT */}
       <main className="px-6 md:px-16 pt-52 pb-40">
         {showWishlist ? (
           <section className="animate-in fade-in duration-500">
@@ -198,18 +213,20 @@ export default function StreamWiseFinal() {
         )}
       </main>
 
-      {/* PORTAL MODAL */}
       {selected && (
         <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/98 backdrop-blur-3xl animate-in fade-in" onClick={() => setSelected(null)} />
           <div className="relative bg-[#0F0D12] w-full max-w-7xl h-[85vh] rounded-[3.5rem] border border-white/10 flex flex-col md:flex-row overflow-hidden shadow-3xl animate-in zoom-in-95 duration-300">
             <div className="md:w-3/5 relative p-12 flex flex-col justify-end">
-              <img src={`${IMAGE_BASE}${selected.backdrop_path}`} className="absolute inset-0 w-full h-full object-cover opacity-20" alt="b" />
+              <img src={`${IMAGE_BASE}${selected.backdrop_path || selected.poster_path}`} className="absolute inset-0 w-full h-full object-cover opacity-20" alt="b" />
               <div className="relative z-10">
                 <h2 className="text-4xl md:text-8xl font-black uppercase tracking-tighter italic mb-6 leading-none">{selected.title || selected.name}</h2>
                 <div className="flex gap-4 mb-8">
                     <button onClick={() => toggleWishlist(selected)} className={`px-10 py-4 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${wishlist.find(x => x.id === selected.id) ? 'bg-fuchsia-600 border-fuchsia-600 shadow-lg' : 'bg-white/10 border border-white/10 hover:bg-white hover:text-black'}`}>
                         {wishlist.find(x => x.id === selected.id) ? '✓ Saved' : '+ Save to Vault'}
+                    </button>
+                    <button onClick={() => handleShare(selected)} className="px-10 py-4 rounded-full bg-fuchsia-600/10 border border-fuchsia-600/30 text-fuchsia-500 text-[10px] font-black uppercase tracking-widest hover:bg-fuchsia-600 hover:text-white transition-all">
+                        Share Intel
                     </button>
                     <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(selected.title || selected.name)}+trailer`)} className="px-10 py-4 rounded-full bg-white text-black text-[10px] font-black uppercase tracking-widest hover:bg-fuchsia-600 hover:text-white transition-all">Trailer</button>
                 </div>
